@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kitchen – Pantry Digital Menu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-orange-50 pb-24 p-4">
+<div class="max-w-md mx-auto space-y-4">
+
+  <h1 class="text-2xl font-black text-orange-600 italic uppercase">👨‍🍳 Pantry Kitchen Live</h1>
+
+  <div id="live-orders" class="space-y-4">
+    <div class="flex items-center justify-center py-12">
+      <div class="w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  </div>
+
+  <hr class="border-orange-200"/>
+  <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">Last 10 Completed</h2>
+  <div id="order-history" class="space-y-2 opacity-60"></div>
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50">
+  <a href="control.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-grip text-xl"></i><span class="text-[9px] font-bold">Control</span></a>
+  <a href="admin.html"   class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-gears text-xl"></i><span class="text-[9px] font-bold">Admin</span></a>
+  <a href="kitchen.html" class="flex flex-col items-center gap-1 text-orange-600"><i class="fa-solid fa-utensils text-xl"></i><span class="text-[9px] font-bold">Kitchen</span></a>
+  <a href="delivery.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-person-walking text-xl"></i><span class="text-[9px] font-bold">Delivery</span></a>
+  <a href="reports.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-chart-pie text-xl"></i><span class="text-[9px] font-bold">Reports</span></a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Dw4lWoDUpCZgvIH4CDGdya_VlHMKHbw",
+    authDomain: "pantry-digimenu.firebaseapp.com",
+    databaseURL: "https://pantry-digimenu-default-rtdb.firebaseio.com",
+    projectId: "pantry-digimenu",
+    storageBucket: "pantry-digimenu.firebasestorage.app",
+    messagingSenderId: "302806127330",
+    appId: "1:302806127330:web:257d91f88c1639788504bb",
+    measurementId: "G-ZL7B7N55D7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const liveDiv = document.getElementById('live-orders');
+  const histDiv = document.getElementById('order-history');
+
+  onValue(ref(db, 'orders'), (snapshot) => {
+    liveDiv.innerHTML = '';
+    histDiv.innerHTML = '';
+    
+    if (!snapshot.exists()) {
+      liveDiv.innerHTML = '<div class="text-center py-12"><div class="text-5xl">🍽️</div><p class="font-black text-gray-400 mt-3 uppercase">No orders placed</p></div>';
+      return;
+    }
+
+    const orders = snapshot.val();
+    let liveCount = 0;
+
+    Object.keys(orders).reverse().forEach(key => {
+      const o = orders[key];
+      if (o.status !== 'completed' && o.status !== 'cancelled') {
+        liveCount++;
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-3xl border shadow-sm space-y-3";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-black text-gray-800">${o.customerName || 'Passenger'}</p>
+              <p class="text-xs text-red-600 font-bold mt-0.5">📍 ${o.deliveryAddress || 'Seat/Coach'}</p>
+              <p class="text-xs text-gray-500 font-bold">📞 ${o.customerPhone || 'N/A'}</p>
+            </div>
+            <span class="bg-orange-100 text-orange-600 text-[10px] font-black uppercase px-3 py-1 rounded-full">${o.status}</span>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-2xl text-xs font-bold text-gray-700">${o.items}</div>
+          <div class="flex justify-between items-center border-t pt-2">
+            <span class="font-black text-lg text-green-600">₹${o.totalAmount}</span>
+            <div class="flex gap-2">
+              <button onclick="updateStatus('${key}', 'preparing')" class="bg-blue-600 text-white text-xs font-bold px-3 py-2 rounded-xl">Preparing</button>
+              <button onclick="updateStatus('${key}', 'ready')" class="bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-xl">Ready</button>
+            </div>
+          </div>
+        `;
+        liveDiv.appendChild(card);
+      }
+    });
+
+    if (liveCount === 0) {
+      liveDiv.innerHTML = '<div class="text-center py-12"><p class="font-black text-gray-400 uppercase">No active orders</p></div>';
+    }
+  });
+
+  window.updateStatus = function(key, status) {
+    update(ref(db, `orders/${key}`), { status: status });
+  };
+</script>
+</body>
+</html>
