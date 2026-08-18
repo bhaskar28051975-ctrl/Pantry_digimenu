@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin – Pantry Digital Menu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-red-50 pb-28 p-4">
+<div class="max-w-md mx-auto space-y-5">
+
+  <div class="bg-white rounded-3xl p-5 shadow-sm border flex items-center gap-4">
+    <div class="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center text-3xl shrink-0">🍱</div>
+    <div>
+      <h1 class="font-black text-gray-800 text-lg uppercase italic">Pantry Digital Menu</h1>
+      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Admin Panel</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-3xl shadow-xl border space-y-3">
+    <h2 class="font-black text-gray-700 uppercase text-xs tracking-widest">➕ Add Menu Item / Dish</h2>
+    <input id="fDish" type="text" placeholder="Item Name (e.g., Veg Thali, Tea) *" class="w-full p-3 border rounded-xl bg-gray-50 text-sm font-bold focus:outline-none focus:border-red-400"/>
+    <input id="fPrice" type="number" placeholder="Price (₹) *" class="w-full p-3 border rounded-xl bg-gray-50 text-sm font-bold focus:outline-none focus:border-red-400"/>
+    <input id="fImg" type="text" placeholder="Image URL (optional)" class="w-full p-3 border rounded-xl bg-gray-50 text-sm focus:outline-none focus:border-red-400"/>
+    <button id="saveItemBtn" class="w-full bg-red-600 text-white py-4 rounded-xl font-black uppercase shadow active:scale-95">💾 Add to Menu</button>
+  </div>
+
+  <div class="bg-white p-6 rounded-3xl shadow-xl border space-y-3">
+    <h2 class="font-black text-gray-700 uppercase text-xs tracking-widest">📋 Active Menu Items</h2>
+    <div id="adminMenuList" class="space-y-2"></div>
+  </div>
+
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50">
+  <a href="control.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-grip text-xl"></i><span class="text-[9px] font-bold">Control</span></a>
+  <a href="admin.html"   class="flex flex-col items-center gap-1 text-red-600"><i class="fa-solid fa-gears text-xl"></i><span class="text-[9px] font-bold">Admin</span></a>
+  <a href="kitchen.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-utensils text-xl"></i><span class="text-[9px] font-bold">Kitchen</span></a>
+  <a href="delivery.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-person-walking text-xl"></i><span class="text-[9px] font-bold">Delivery</span></a>
+  <a href="reports.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-chart-pie text-xl"></i><span class="text-[9px] font-bold">Reports</span></a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Dw4lWoDUpCZgvIH4CDGdya_VlHMKHbw",
+    authDomain: "pantry-digimenu.firebaseapp.com",
+    databaseURL: "https://pantry-digimenu-default-rtdb.firebaseio.com",
+    projectId: "pantry-digimenu",
+    storageBucket: "pantry-digimenu.firebasestorage.app",
+    messagingSenderId: "302806127330",
+    appId: "1:302806127330:web:257d91f88c1639788504bb",
+    measurementId: "G-ZL7B7N55D7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  document.getElementById('saveItemBtn').addEventListener('click', () => {
+    const name = document.getElementById('fDish').value.trim();
+    const price = document.getElementById('fPrice').value.trim();
+    const img = document.getElementById('fImg').value.trim() || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
+
+    if(!name || !price) {
+      alert('Please fill in dish name and price!');
+      return;
+    }
+
+    const newRef = push(ref(db, 'menu'));
+    set(newRef, { dish: name, price: parseFloat(price), dishImg: img }).then(() => {
+      document.getElementById('fDish').value = '';
+      document.getElementById('fPrice').value = '';
+      document.getElementById('fImg').value = '';
+      alert('Item added successfully!');
+    });
+  });
+
+  onValue(ref(db, 'menu'), (snapshot) => {
+    const container = document.getElementById('adminMenuList');
+    container.innerHTML = '';
+    if (!snapshot.exists()) {
+      container.innerHTML = '<p class="text-xs text-gray-400">No items in menu.</p>';
+      return;
+    }
+
+    const items = snapshot.val();
+    Object.keys(items).forEach(key => {
+      const item = items[key];
+      const div = document.createElement('div');
+      div.className = "flex justify-between items-center p-3 bg-gray-50 rounded-xl border text-xs font-bold";
+      div.innerHTML = `
+        <div>
+          <p class="text-gray-800">${item.dish}</p>
+          <p class="text-green-600">₹${item.price}</p>
+        </div>
+        <button onclick="deleteItem('${key}')" class="text-red-500 font-bold">Delete</button>
+      `;
+      container.appendChild(div);
+    });
+  });
+
+  window.deleteItem = function(key) {
+    if(confirm('Delete item?')) {
+      remove(ref(db, `menu/${key}`));
+    }
+  };
+</script>
+</body>
+</html>
