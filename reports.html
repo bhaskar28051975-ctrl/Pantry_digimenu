@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reports – Pantry Digital Menu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-gray-50 pb-24 p-4">
+<div class="max-w-md mx-auto space-y-4">
+
+  <h1 class="text-2xl font-black text-gray-700 italic uppercase">📊 Pantry Reports</h1>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="bg-green-600 text-white p-5 rounded-3xl shadow-lg">
+      <p class="text-[10px] font-black uppercase opacity-80">Total Sales Revenue</p>
+      <p class="font-black text-3xl mt-1" id="rRevenue">₹0</p>
+      <p class="text-[10px] opacity-70 mt-1" id="rTotalOrders">0 completed</p>
+    </div>
+    <div class="bg-blue-600 text-white p-5 rounded-3xl shadow-lg">
+      <p class="text-[10px] font-black uppercase opacity-80">Active Orders</p>
+      <p class="font-black text-3xl mt-1" id="rActive">0</p>
+      <p class="text-[10px] opacity-70 mt-1">Pending/Preparing</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-3xl p-5 border space-y-3">
+    <p class="text-xs font-black text-gray-500 uppercase tracking-wider">Order Records</p>
+    <div id="orderList" class="space-y-2 text-xs"></div>
+  </div>
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50">
+  <a href="control.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-grip text-xl"></i><span class="text-[9px] font-bold">Control</span></a>
+  <a href="admin.html"   class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-gears text-xl"></i><span class="text-[9px] font-bold">Admin</span></a>
+  <a href="kitchen.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-utensils text-xl"></i><span class="text-[9px] font-bold">Kitchen</span></a>
+  <a href="delivery.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-person-walking text-xl"></i><span class="text-[9px] font-bold">Delivery</span></a>
+  <a href="reports.html" class="flex flex-col items-center gap-1 text-purple-600"><i class="fa-solid fa-chart-pie text-xl"></i><span class="text-[9px] font-bold">Reports</span></a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Dw4lWoDUpCZgvIH4CDGdya_VlHMKHbw",
+    authDomain: "pantry-digimenu.firebaseapp.com",
+    databaseURL: "https://pantry-digimenu-default-rtdb.firebaseio.com",
+    projectId: "pantry-digimenu",
+    storageBucket: "pantry-digimenu.firebasestorage.app",
+    messagingSenderId: "302806127330",
+    appId: "1:302806127330:web:257d91f88c1639788504bb",
+    measurementId: "G-ZL7B7N55D7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  onValue(ref(db, 'orders'), (snapshot) => {
+    let revenue = 0;
+    let completed = 0;
+    let active = 0;
+    const list = document.getElementById('orderList');
+    list.innerHTML = '';
+
+    if (snapshot.exists()) {
+      const orders = snapshot.val();
+      Object.values(orders).forEach(o => {
+        if (o.status === 'completed') {
+          revenue += parseFloat(o.totalAmount || 0);
+          completed++;
+        } else if (o.status !== 'cancelled') {
+          active++;
+        }
+
+        const div = document.createElement('div');
+        div.className = "p-3 bg-gray-50 rounded-xl flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <p class="font-bold text-gray-800">${o.customerName} (${o.deliveryAddress})</p>
+            <p class="text-[10px] text-gray-500">${o.items}</p>
+          </div>
+          <span class="font-black ${o.status === 'completed' ? 'text-green-600' : 'text-orange-500'}">₹${o.totalAmount}</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    document.getElementById('rRevenue').textContent = `₹${revenue}`;
+    document.getElementById('rTotalOrders').textContent = `${completed} completed`;
+    document.getElementById('rActive').textContent = active;
+  });
+</script>
+</body>
+</html>
