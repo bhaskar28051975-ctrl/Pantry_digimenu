@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Delivery Partner – Pantry Digital Menu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-blue-50 pb-28 p-4">
+
+<div class="max-w-md mx-auto space-y-4">
+  <div class="bg-blue-600 p-6 rounded-3xl text-white shadow-lg">
+    <h1 class="text-xl font-black uppercase italic">🍱 Pantry Delivery Express</h1>
+    <p class="text-xs text-blue-200 mt-1">Deliver food directly to train coach seats</p>
+  </div>
+
+  <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Active Orders to Deliver</p>
+  <div id="delivery-orders" class="space-y-4">
+    <div class="flex items-center justify-center py-12">
+      <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  </div>
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50">
+  <a href="control.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-grip text-xl"></i><span class="text-[9px] font-bold">Control</span></a>
+  <a href="admin.html"   class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-gears text-xl"></i><span class="text-[9px] font-bold">Admin</span></a>
+  <a href="kitchen.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-utensils text-xl"></i><span class="text-[9px] font-bold">Kitchen</span></a>
+  <a href="delivery.html" class="flex flex-col items-center gap-1 text-blue-600"><i class="fa-solid fa-person-walking text-xl"></i><span class="text-[9px] font-bold">Delivery</span></a>
+  <a href="reports.html" class="flex flex-col items-center gap-1 text-gray-400"><i class="fa-solid fa-chart-pie text-xl"></i><span class="text-[9px] font-bold">Reports</span></a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Dw4lWoDUpCZgvIH4CDGdya_VlHMKHbw",
+    authDomain: "pantry-digimenu.firebaseapp.com",
+    databaseURL: "https://pantry-digimenu-default-rtdb.firebaseio.com",
+    projectId: "pantry-digimenu",
+    storageBucket: "pantry-digimenu.firebasestorage.app",
+    messagingSenderId: "302806127330",
+    appId: "1:302806127330:web:257d91f88c1639788504bb",
+    measurementId: "G-ZL7B7N55D7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const container = document.getElementById('delivery-orders');
+
+  onValue(ref(db, 'orders'), (snapshot) => {
+    container.innerHTML = '';
+    if (!snapshot.exists()) {
+      container.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">No pending deliveries</p>';
+      return;
+    }
+
+    const orders = snapshot.val();
+    let count = 0;
+
+    Object.keys(orders).reverse().forEach(key => {
+      const o = orders[key];
+      if (o.status !== 'completed' && o.status !== 'cancelled') {
+        count++;
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-3xl border border-gray-200 shadow-md space-y-3";
+        card.innerHTML = `
+          <div class="bg-red-50 p-3 rounded-2xl border border-red-200">
+            <p class="text-xs text-red-600 font-black uppercase">Deliver To:</p>
+            <p class="text-xl font-black text-red-700 mt-1">${o.deliveryAddress || 'Seat/Coach'}</p>
+          </div>
+          <div class="text-xs font-bold text-gray-800">
+            <p>Passenger: ${o.customerName}</p>
+            <p>Phone: <a href="tel:${o.customerPhone}" class="text-blue-600 underline">${o.customerPhone}</a></p>
+            <p class="text-gray-500 mt-1">Items: ${o.items}</p>
+          </div>
+          <div class="flex justify-between items-center pt-2">
+            <span class="font-black text-green-600 text-xl">Collect ₹${o.totalAmount}</span>
+            <button onclick="markDelivered('${key}')" class="bg-green-600 text-white font-black text-xs px-4 py-3 rounded-xl shadow active:scale-95">✅ Mark Served</button>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    });
+
+    if (count === 0) container.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">No pending deliveries</p>';
+  });
+
+  window.markDelivered = function(key) {
+    if(confirm('Confirm cash collected and meal served?')) {
+      update(ref(db, `orders/${key}`), { status: 'completed' });
+    }
+  };
+</script>
+</body>
+</html>
